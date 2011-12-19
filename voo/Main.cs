@@ -19,6 +19,13 @@ namespace Voo
         void Connected();
         void Disconnected();
         void Browse(string path, string[] parts);
+
+        void TimeChanged(ulong time);
+        void StateChanged(Connection.PlayState state );
+        void LengthChanged(ulong length);
+        void SeekableChanged(bool seekable);
+        void SubtitleChanged(int subtitle);
+        void SubtitleCountChanged(int subtitlecount);
     }
 
     public class Application
@@ -52,6 +59,25 @@ namespace Voo
             _conn.Disconnected += delegate {
                 _app.InvokeOnMainThread(delegate { _app.Disconnected(); });
             };
+
+            _conn.TimeChanged += delegate {
+                _app.InvokeOnMainThread(delegate { _app.TimeChanged(_conn.Time); });
+            };
+            _conn.StateChanged += delegate {
+                _app.InvokeOnMainThread(delegate { _app.StateChanged(_conn.State); });
+            };
+            _conn.LengthChanged += delegate {
+                _app.InvokeOnMainThread(delegate { _app.LengthChanged(_conn.Length); });
+            };
+            _conn.SeekableChanged += delegate {
+                _app.InvokeOnMainThread(delegate { _app.SeekableChanged(_conn.Seekable); });
+            };
+            _conn.SubtitleChanged += delegate {
+                _app.InvokeOnMainThread(delegate { _app.SubtitleChanged(_conn.Subtitle); });
+            };
+            _conn.SubtitleCountChanged += delegate {
+                _app.InvokeOnMainThread(delegate { _app.SubtitleCountChanged(_conn.SubtitleCount); });
+            };
         }
 
         UIAlertView _poweralert;
@@ -73,7 +99,6 @@ namespace Voo
         public static Application Instance;
     }
 
-    // The name AppDelegate is referenced in the MainWindow.xib file.
     public partial class AppDelegateIPad : UIApplicationDelegate, IVooApp
     {
         public override void OnActivated(UIApplication application)
@@ -104,7 +129,7 @@ namespace Voo
             this.mainnav.View.RemoveFromSuperview();
             this.browsernav.PopToRootViewController(false);
 
-            this.status.Text = "Locating Voo Server...";
+            this.status.Text = "Disconnected. Locating Voo Server...";
         }
 
         public override bool FinishedLaunching(UIApplication app, NSDictionary options)
@@ -113,7 +138,7 @@ namespace Voo
 
             Application.Instance.Init(this);
 
-            this.play.TouchDown += delegate { Application.Instance._conn.PlayPause(); };
+            this.play.TouchDown += delegate { Application.Instance._conn.TogglePause(); };
             this.stop.TouchDown += delegate { Application.Instance._conn.Stop(); };
             this.backfast.TouchDown += delegate { Application.Instance._conn.Backfast(); };
             this.backslow.TouchDown += delegate { Application.Instance._conn.Backslow(); };
@@ -142,6 +167,49 @@ namespace Voo
                 b.Title = Path.GetFileName(path.Replace("\\", "/"));
                 this.browsernav.PushViewController(b, true);
             }
+        }
+
+        ulong _time, _length;
+        Connection.PlayState _state;
+        int _subtitle, _subtitlecount;
+        bool _seekable;
+
+        public void TimeChanged(ulong time) {
+            _time = time;
+            this.seeklabel.Text = Utils.to_time(_time) + " / " + Utils.to_time(_length);
+        }
+        public void StateChanged(Connection.PlayState state) {
+            _state = state;
+            this.play.SetTitle(_state == Connection.PlayState.Playing ? "Pause" : "Resume", UIControlState.Normal);
+            this.play.Hidden = _state == Connection.PlayState.Stopped;
+            this.seeklabel.Hidden = _state == Connection.PlayState.Stopped;
+            this.backfast.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.backslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.fwdslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.fwdfast.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.seektitle.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+        }
+        public void LengthChanged(ulong length) {
+            _length = length;
+            this.seeklabel.Text = Utils.to_time(_time) + " / " + Utils.to_time(_length);
+        }
+        public void SeekableChanged(bool seekable) {
+	        _seekable = seekable;
+            this.backfast.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.backslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.fwdslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.fwdfast.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.seektitle.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+        }
+        public void SubtitleChanged(int subtitle) {
+            _subtitle = subtitle;
+            this.subtitles.Hidden = _subtitlecount == 0;
+            this.subtitles.SetTitle(String.Format ("Subtitles: {0}/{1}", _subtitle, _subtitlecount), UIControlState.Normal);
+        }
+        public void SubtitleCountChanged(int subtitlecount) {
+            _subtitlecount = subtitlecount;
+            this.subtitles.Hidden = _subtitlecount == 0;
+            this.subtitles.SetTitle(String.Format ("Subtitles: {0}/{1}", _subtitle, _subtitlecount), UIControlState.Normal);
         }
     }
 
@@ -175,7 +243,7 @@ namespace Voo
             this.mainnav.View.RemoveFromSuperview();
             this.browsernav.PopToRootViewController(false);
 
-            this.status.Text = "Locating Voo Server...";
+            this.status.Text = "Disconnected. Locating Voo Server...";
         }
 
         public override bool FinishedLaunching(UIApplication app, NSDictionary options)
@@ -184,7 +252,7 @@ namespace Voo
 
             Application.Instance.Init(this);
 
-            this.play.TouchDown += delegate { Application.Instance._conn.PlayPause(); };
+            this.play.TouchDown += delegate { Application.Instance._conn.TogglePause(); };
             this.stop.TouchDown += delegate { Application.Instance._conn.Stop(); };
             this.backfast.TouchDown += delegate { Application.Instance._conn.Backfast(); };
             this.backslow.TouchDown += delegate { Application.Instance._conn.Backslow(); };
@@ -213,6 +281,49 @@ namespace Voo
                 b.Title = Path.GetFileName(path.Replace("\\", "/"));
                 this.browsernav.PushViewController(b, true);
             }
+        }
+
+        ulong _time, _length;
+        Connection.PlayState _state;
+        int _subtitle, _subtitlecount;
+        bool _seekable;
+
+        public void TimeChanged(ulong time) {
+            _time = time;
+            this.seeklabel.Text = Utils.to_time(_time) + " / " + Utils.to_time(_length);
+        }
+        public void StateChanged(Connection.PlayState state) {
+            _state = state;
+            this.play.SetTitle(_state == Connection.PlayState.Playing ? "Pause" : "Resume", UIControlState.Normal);
+            this.play.Hidden = _state == Connection.PlayState.Stopped;
+            this.seeklabel.Hidden = _state == Connection.PlayState.Stopped;
+            this.backfast.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.backslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.fwdslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.fwdfast.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.seektitle.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+        }
+        public void LengthChanged(ulong length) {
+            _length = length;
+            this.seeklabel.Text = Utils.to_time(_time) + " / " + Utils.to_time(_length);
+        }
+        public void SeekableChanged(bool seekable) {
+	        _seekable = seekable;
+            this.backfast.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.backslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.fwdslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.fwdfast.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+            this.seektitle.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
+        }
+        public void SubtitleChanged(int subtitle) {
+            _subtitle = subtitle;
+            this.subtitles.Hidden = _subtitlecount == 0;
+            this.subtitles.SetTitle(String.Format ("Subtitles: {0}/{1}", _subtitle, _subtitlecount), UIControlState.Normal);
+        }
+        public void SubtitleCountChanged(int subtitlecount) {
+            _subtitlecount = subtitlecount;
+            this.subtitles.Hidden = _subtitlecount == 0;
+            this.subtitles.SetTitle(String.Format ("Subtitles: {0}/{1}", _subtitle, _subtitlecount), UIControlState.Normal);
         }
     }
 

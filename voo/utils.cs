@@ -4,6 +4,37 @@ using System.Text;
 
 namespace Voo
 {
+    public class Utils {
+        public static string to_time(ulong time) {
+            ulong d, h, m, s;
+
+            time /= 1000;
+
+            s = time % 60;
+            time -= s;
+            time /= 60;
+
+            m = time % 60;
+            time -= m;
+            time /= 60;
+
+            h = time % 24;
+            time -= h;
+            time /= 24;
+
+            d = time;
+
+            string str = ":" + s.ToString("00");
+            if (d != 0)
+                str = d.ToString() + ":" + h.ToString("00") + ":" + m.ToString("00") + str;
+            else if (h != 0)
+                str = h.ToString() + ":" + m.ToString("00") + str;
+            else
+                str = m.ToString() + str;
+
+            return str;
+        }
+    }
     public class NetLineParser {
 	public delegate void ProcessCB(string s);
 
@@ -120,7 +151,7 @@ namespace Voo
 
 	public void Process(Stream stream, ProcessCB callout)
 	{
-            byte[] buf = new byte[100];
+            byte[] buf = new byte[1000000];
             while (true) {
                 int r = stream.Read(buf, 0, buf.Length);
                 if (r == 0) {

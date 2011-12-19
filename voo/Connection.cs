@@ -10,21 +10,29 @@ namespace Voo
 {
     public class Connection {
         List<RecvHandler> _recvq = new List<RecvHandler>();
-        NetLineParser _nlp = new NetLineParser();
         IPAddress _ip = IPAddress.Any;
-        Socket _sock;
+        TcpClient _client;
+        object _lock = new object();
 
         public Connection() {
-            IPNP.IO.Init();
-            IPNP.IO.IncomingBroadcast += ev_broadcast;
+//            IPNP.IO.Init();
+//            IPNP.IO.IncomingBroadcast += ev_broadcast;
+
+            Connect(IPAddress.Parse("127.0.0.1"));
         }
 
         public void Send(string s)
         {
-            if (_sock == null)
-                return;
-            Console.WriteLine("sent {0}", s);
-            SocketManager.Instance.AddWriter(_sock, Encoding.ASCII.GetBytes(s + "\n"));
+            lock (_lock) {
+                if (_client == null)
+                    return;
+                try {
+                    Socket sock = _client.Client;
+                    byte[] buf = Encoding.UTF8.GetBytes(s + "\n");
+                    sock.BeginSend(buf, 0, buf.Length, SocketFlags.None, ar => { sock.EndSend(ar); }, null);
+                    Console.WriteLine("sent [" + s + "]");
+                } catch { }
+            }
         }
 
         public delegate void RecvHandler(string s);
@@ -38,16 +46,27 @@ namespace Voo
         public event Action SuccessConnecting;
         public event Action Disconnected;
 
-        public void Stop() { Send("stop"); }
-        public void Backfast() { Send("backfast"); }
-        public void Backslow() { Send("backslow"); }
-        public void Fwdfast() { Send("fwdfast"); }
-        public void Fwdslow() { Send("fwdslow"); }
-        public void Poweroff() { Send("comms off"); }
-        public void Louder() { Send("comms volume up"); }
-        public void Vol(int vol) { Send("comms volume " + vol); }
-        public void Softer() { Send("comms volume down"); }
-        public void Subtitles() { Send("subtitle"); }
+        public void Stop() { Send(":stop"); }
+        public void Backfast()   { Send(":seek " + (Math.Max(0, this.Time - 30000)).ToString()); }
+        public void Backslow()   { Send(":seek " + (Math.Max(0, this.Time - 5000)).ToString()); }
+        public void Fwdfast()    { if (this.Time < this.Length - 60000) Send(":seek " + (this.Time + 30000).ToString()); }
+        public void Fwdslow()    { if (this.Time < this.Length - 10000) Send(":seek " + (this.Time + 5000).ToString()); }
+        public void Poweroff()   { Send(":comms off"); }
+        public void Louder()     { Send(":comms volume up"); }
+        public void Vol(int vol) { Send(":comms volume " + vol); }
+        public void Softer()     { Send(":comms volume down"); }
+        public void Subtitles() {
+            if (this.SubtitleCount == 0) {
+                return;
+            } else if (Subtitle == -1) {
+                Send(":subtitle 0");
+            } else {
+                if (this.Subtitle == this.SubtitleCount-1)
+                    Send(":subtitle 0");
+                else
+                    Send(":subtitle " + (this.Subtitle + 1));
+            }
+        }
         public void List(string parent, string name, Action<string, string[]> cb) {
             string path;
             if (parent != null)
@@ -55,21 +74,22 @@ namespace Voo
             else
                 path = name;
 
-            Send("list " + path,
+            Send(":list " + path,
                 delegate (string line) {
-                    cb(path, line.Split(new char[] { ' ' }, 2)[1].Split(new char[] { ':' }, StringSplitOptions.RemoveEmptyEntries));
+                Console.WriteLine("LINE:" + line);
+                    cb(path, line.Split(new char[] { ':' }, StringSplitOptions.RemoveEmptyEntries));
                 });
         }
 
-        public void DeleteFile(string parent, string name) { Send("delfile " + parent + "\\" + name); }
-        public void DeleteDir(string parent, string name) { Send("deldir " + parent + "\\" + name); }
+        public void DeleteFile(string parent, string name) { Send(":delfile " + parent + "\\" + name); }
+        public void DeleteDir(string parent, string name) { Send(":deldir " + parent + "\\" + name); }
         public void Play(string parent, string name) {
-            Send("comms source 3"); 
-            Send("load " + parent + "\\" + name);
+            Send(":comms source 3");
+            Send(":load " + parent + "\\" + name);
         }
-        public void PlayPause() {
-            Send("comms source 3");
-            Send("playpause");
+        public void TogglePause() {
+            Send(":comms source 3");
+            Send(":togglepause");
         }
 
         //--------------------------------------
@@ -84,43 +104,137 @@ namespace Voo
             if (di.DeviceType != new IPNP.Device("DB8DD6FA-398A-4548-8CD1-9231D6DC4EE2"))
                 return;
 
-            _sock = null;
-            _ip = src_addr;
-            SocketManager.Instance.AddConnecter(new IPEndPoint(_ip, 4356), ev_connected);
+            Connect(src_addr);
+        }
+
+        void Connect(IPAddress ip) {
+            lock (_lock) {
+                if (_client != null) {
+                    try { _client.Close(); } catch { }
+                    try { ((IDisposable)_client).Dispose(); } catch { }
+                }
+                _client = null;
+                _ip = ip;
+                _client = new TcpClient();
+                _client.BeginConnect(_ip, 4356, ev_connected, null);
+            }
             if (this.Connecting != null) this.Connecting();
         }
 
-        void ev_connected(Socket sock, bool success)
+        void ev_connected(IAsyncResult ar)
         {
-            if (!success) {
-                _sock = null;
-                _ip = IPAddress.Any;
-                if (this.FailedConnecting != null) this.FailedConnecting();
-            } else {
-                _sock = sock;
-                SocketManager.Instance.AddReader(_sock, ev_read);
-                if (this.SuccessConnecting != null) this.SuccessConnecting();
+            if (ar.IsCompleted) {
+                try {
+                    lock (_lock) {
+                        _client.EndConnect(ar);
+                    }
+                    if (this.SuccessConnecting != null) this.SuccessConnecting();
+                    (new Thread(ev_read) { IsBackground = true }).Start();
+                } catch {
+                    lock (_lock) {
+                        try { _client.Close(); } catch { }
+                        try { ((IDisposable)_client).Dispose(); } catch { }
+                        _client = null;
+                        _ip = IPAddress.Any;
+                    }
+                    if (this.FailedConnecting != null) this.FailedConnecting();
+                }
             }
         }
 
-        void ev_read(Socket s, byte[] bytes, int cnt)
+        void ev_read()
         {
-//            Console.WriteLine("got {0} bytes", cnt);
-            if (s != _sock) return;
-            if (cnt == 0) {
-                SocketManager.Instance.Shutdown(_sock);
-                _sock = null;
-                _ip = IPAddress.Any;
-
-                if (this.Disconnected != null) this.Disconnected();
-                return;
+            StreamReader rdr;
+            lock (_lock) {
+                rdr = new StreamReader(_client.GetStream(), Encoding.UTF8);
             }
-            _nlp.Process(bytes, 0, bytes.Length, ev_line);
+            try {
+                string s;
+                while ((s = rdr.ReadLine()) != null)
+                    ev_line(s);
+            } catch (Exception e) {
+                Console.WriteLine(e.ToString());
+            } finally {
+                lock (_lock) {
+                    try { _client.Close(); } catch { }
+                    try { ((IDisposable)_client).Dispose(); } catch { }
+                    _client = null;
+                    _ip = IPAddress.Any;
+                }
+                if (this.Disconnected != null) this.Disconnected();
+            }
         }
 
         void ev_line(string s) {
-//            Console.WriteLine("got line {0}", s);
-            if (_recvq.Count != 0) { _recvq[0](s); _recvq.RemoveAt(0); }
+            Console.WriteLine("got line {0}:{1}", s.Length, s.Replace("\r", "").Replace("\n", ""));
+            if (s.Length == 0) return;
+            if (s[0] == '*') {
+                if (s.StartsWith("*stopped")) {
+                    this.State = PlayState.Stopped;
+                    OnStateChanged();
+                }
+                if (s.StartsWith("*playing")) {
+                    this.State = PlayState.Playing;
+                    OnStateChanged();
+                }
+                if (s.StartsWith("*paused")) {
+                    this.State = PlayState.Paused;
+                    OnStateChanged();
+                }
+                if (s.StartsWith("*seekable")) {
+                    this.Seekable = true;
+                    OnSeekableChanged();
+                }
+                if (s.StartsWith("*notseekable")) {
+                    this.Seekable = false;
+                    OnSeekableChanged();
+                }
+                if (s.StartsWith("*subtitle ")) {
+                    this.Subtitle = Convert.ToInt32(s.Substring(10));
+                    OnSubtitleChanged();
+                }
+                if (s.StartsWith("*subtitlecount ")) {
+                    this.SubtitleCount = Convert.ToInt32(s.Substring(15));
+                    OnSubtitleCountChanged();
+                }
+                if (s.StartsWith("*time ")) {
+                    this.Time = Convert.ToUInt64(s.Substring(6));
+                    OnTimeChanged();
+                }
+                if (s.StartsWith("*length ")) {
+                    this.Length = Convert.ToUInt64(s.Substring(8));
+                    OnLengthChanged();
+                }
+
+            } else if (s[0] == '!') {
+                if (_recvq.Count != 0) { _recvq[0](s.Substring(1)); _recvq.RemoveAt(0); }
+            }
         }
+
+        public enum PlayState {
+            Stopped,
+            Playing,
+            Paused
+        }
+
+        public PlayState State { private set; get; }
+        public bool Seekable { private set; get; }
+        public int Subtitle { private set; get; }
+        public int SubtitleCount { private set; get; }
+        public ulong Time { private set; get; }
+        public ulong Length { private set; get; }
+
+        public event Action TimeChanged;
+        void OnTimeChanged() { if (TimeChanged != null) TimeChanged(); }
+        public event Action StateChanged;
+        void OnStateChanged() { if (StateChanged != null) StateChanged(); }
+        public event Action LengthChanged;
+        void OnLengthChanged() { if (LengthChanged != null) LengthChanged(); }
+        public event Action SeekableChanged;
+        void OnSeekableChanged() { if (SeekableChanged != null) SeekableChanged(); }
+        public event Action SubtitleChanged;
+        void OnSubtitleChanged() { if (SubtitleChanged != null) SubtitleChanged(); }
+        public event Action SubtitleCountChanged;
+        void OnSubtitleCountChanged() { if (SubtitleCountChanged != null) SubtitleCountChanged(); }
     }
 }
