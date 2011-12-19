@@ -75,9 +75,7 @@ namespace vooserver
                     case ":subtitle": { _s.Subtitle(Convert.ToInt32(parts[1])); break; }
                     case ":seek": { _s.Seek(Convert.ToUInt64(parts[1])); break; }
                     case ":nextframe": { _s.NextFrame(); break; }
-//                    case ":volumeup": { _s.VolumeUp(); break; }
-//                    case ":volumedown": { _s.VolumeDown(); break; }
-//                    case ":setvolume": { _s.Volume(Convert.ToInt32(parts[1])); break; }
+                    case ":comms": { _s.Comms(parts[1]); break; }
                     case ":delfile": { 
                         string file = makesafe(parts[1]);
                         Console.WriteLine("deleting file {0}", file);
@@ -311,6 +309,10 @@ namespace vooserver
             lock(_lock) {
                 if (_player == null) return;
                 _player.NextFrame();
+            }
+        }
+        public void Comms(string s) {
+            lock(_lock) {
             }
         }
     }
