@@ -244,28 +244,40 @@ namespace vooserver
                 }
                 _player = new Player(path);
                 _player.TimeChanged += s => {
-                    _time = s;
-                    Client.Broadcast("*" + _time);
+                    if (_time != s) {
+                        _time = s;
+                        Client.Broadcast("*" + _time);
+                    }
                 };
                 _player.StateChanged += s => {
-                    _state = s;
-                    Client.Broadcast("*" + _state);
+                    if (_state != s) {
+                        _state = s;
+                        Client.Broadcast("*" + _state);
+                    }
                 };
                 _player.LengthChanged += s => {
-                    _length = s;
-                    Client.Broadcast("*" + _length);
+                    if (_length != s) {
+                        _length = s;
+                        Client.Broadcast("*" + _length);
+                    }
                 };
                 _player.SeekableChanged += s => {
-                    _seekable = s;
-                    Client.Broadcast("*" + _seekable);
+                    if (_seekable != s) {
+                        _seekable = s;
+                        Client.Broadcast("*" + _seekable);
+                    }
                 };
                 _player.SubtitleChanged += s => {
-                    _subtitle = s;
-                    Client.Broadcast("*" + _subtitle);
+                    if (_subtitle != s) {
+                        _subtitle = s;
+                        Client.Broadcast("*" + _subtitle);
+                    }
                 };
                 _player.SubtitleCountChanged += s => {
-                    _subtitlecount = s;
-                    Client.Broadcast("*" + _subtitlecount);
+                    if (_subtitlecount != s) {
+                        _subtitlecount = s;
+                        Client.Broadcast("*" + _subtitlecount);
+                    }
                 };
             }
         }
@@ -311,22 +323,26 @@ namespace vooserver
         {
             Kill();
 
-            Process p = new Process();
-            p.StartInfo.FileName = "vooplayer.app/Contents/MacOS/vooplayer";
-            p.Start();
-//            p.Dispose();
 
-            int i = 5;
-            while (i-- != 0) {
+            using (NSAutoreleasePool pool = new NSAutoreleasePool())
+            {
+                string fn = NSBundle.MainBundle.BundlePath + "/Contents/Resources/vooplayer.app";
+                NSWorkspace.SharedWorkspace.LaunchApplication(fn);
+            }
+
+
+            int i = 10;
+            while (--i != 0) {
                 try {
                     _client = new TcpClient("localhost", 4357);
+                    break;
                 } catch {
-                    i--;
-                    Thread.Sleep(300);
+                    Thread.Sleep(1000);
                 }
             }
             if (i == 0) {
                 Console.WriteLine("failed to connect to child process");
+                Thread.Sleep(10000);
                 Dispose();
                 return;
             }
@@ -335,6 +351,7 @@ namespace vooserver
             (new Thread(ev_read) { IsBackground = true }).Start();
 
             Send(":load " + path);
+            Console.WriteLine("foo19");
         }
 
         public void Dispose() {
@@ -363,13 +380,11 @@ namespace vooserver
         }
 
         void Kill() {
-            foreach (Process p in Process.GetProcesses()) {
-                try {
-                    string name = p.ProcessName.ToLower();
-                    if (name == "vooplayer")
-                        try { p.Kill(); Thread.Sleep(500); } catch { }
-                } catch {
-                }
+            using (Process p = new Process()) {
+                p.StartInfo.FileName = "killall";
+                p.StartInfo.Arguments = "-9 vooplayer";
+                p.Start();
+                p.WaitForExit();
             }
         }
 

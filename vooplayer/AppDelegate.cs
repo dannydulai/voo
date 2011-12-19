@@ -74,8 +74,6 @@ namespace vooplayer
                     case ":nextframe": { _s.NextFrame(); break; }
                     case ":load": {
                         string file = makesafe(parts[1]);
-                        Console.WriteLine("parts[1] = '{0}'", parts[1]);
-                        Console.WriteLine("file = '{0}'", file);
                         _s.Play(file);
                         break;
                     }
@@ -254,11 +252,15 @@ namespace vooplayer
         }
 
         public void Play(string path) {
-            lock (_lock) {
-                IntPtr m = VLC.libvlc_media_new_path(vlc, path);
-                mp = VLC.libvlc_media_player_new_from_media(m);
-                VLC.libvlc_set_fullscreen(mp, true);
-                VLC.libvlc_media_player_play(mp);
+            if (File.Exists(path)) {
+                lock (_lock) {
+                    IntPtr m = VLC.libvlc_media_new_path(vlc, path);
+                    mp = VLC.libvlc_media_player_new_from_media(m);
+                    VLC.libvlc_set_fullscreen(mp, true);
+                    VLC.libvlc_media_player_play(mp);
+                }
+            } else {
+                Stop();
             }
         }
         public void Stop() {
