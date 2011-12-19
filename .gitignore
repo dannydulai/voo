@@ -1,0 +1,5 @@
+*.swp
+vooserver.app
+.DS_Store
+bin
+*.pidb
