@@ -197,13 +197,15 @@ namespace vooserver
 
 
         public Server() {
-            SerialPort sp = new SerialPort("/dev/tty.usbserial-000013FDB", 115200, Parity.None, 8, StopBits.One);
-            sp.Open();
-            _comms = new CommsProcessor(new CommsInterface(sp));
+            try {
+                SerialPort sp = new SerialPort("/dev/tty.usbserial-000013FDB", 115200, Parity.None, 8, StopBits.One);
+                sp.Open();
+                _comms = new CommsProcessor(new CommsInterface(sp));
 
-            _comms.SourceSelectionReceived += delegate(int src) { Client.Broadcast("*comms source " + src); };
-            _comms.VolumeReceived += delegate(int vol) { Client.Broadcast("*comms volume " + vol); };
-            _comms.OffReceived += delegate() { Client.Broadcast("*comms off"); };
+                _comms.SourceSelectionReceived += delegate(int src) { Client.Broadcast("*comms source " + src); };
+                _comms.VolumeReceived += delegate(int vol) { Client.Broadcast("*comms volume " + vol); };
+                _comms.OffReceived += delegate() { Client.Broadcast("*comms off"); };
+            } catch { }
 
             _share = NSUserDefaults.StandardUserDefaults.StringForKey("sharepath");
             if (_share == null) {
@@ -224,13 +226,13 @@ namespace vooserver
                                     c.Send("*" + _subtitle);
                                     c.Send("*" + _subtitlecount);
                                     c.Send("*" + _time);
-                                    c.Send("*comms volume " + _comms.SystemVolume);
-                                    if (_comms.IsOff)
-                                        c.Send("*comms off");
-                                    else
-                                        c.Send("*comms source " + _comms.SystemSourceNum);
-
-
+                                    if (_comms != null) {
+                                        c.Send("*comms volume " + _comms.SystemVolume);
+                                        if (_comms.IsOff)
+                                            c.Send("*comms off");
+                                        else
+                                            c.Send("*comms source " + _comms.SystemSourceNum);
+                                    }
                                 }
                             } catch (Exception e) {
                                 Console.WriteLine("error creating client: " + e.ToString());
@@ -318,24 +320,26 @@ namespace vooserver
         }
         public void Comms(string s) {
             lock(_lock) {
-                string[] parts = s.Split(new char[]{' '}, 2);
-                switch (parts[0]) {
-                    case "off":
-                        _comms.SendSystemOff();
-                        break;
-                    case "source":
-                        _comms.SystemSourceNum = Convert.ToInt32(parts[1]);
-                        break;
-                    case "volume":
-                        if (parts[1] == "up")
-                            _comms.SystemVolume = _comms.SystemVolume+1;
-                        else if (parts[1] == "down")
-                            _comms.SystemVolume = _comms.SystemVolume-1;
-                        else
-                            _comms.SystemVolume = Convert.ToInt32(parts[1]);
-                        break;
-                    default:
-                        break;
+                if (_comms != null) {
+                    string[] parts = s.Split(new char[]{' '}, 2);
+                    switch (parts[0]) {
+                        case "off":
+                            _comms.SendSystemOff();
+                            break;
+                        case "source":
+                            _comms.SystemSourceNum = Convert.ToInt32(parts[1]);
+                            break;
+                        case "volume":
+                            if (parts[1] == "up")
+                                _comms.SystemVolume = _comms.SystemVolume+1;
+                            else if (parts[1] == "down")
+                                _comms.SystemVolume = _comms.SystemVolume-1;
+                            else
+                                _comms.SystemVolume = Convert.ToInt32(parts[1]);
+                            break;
+                        default:
+                            break;
+                    }
                 }
             }
         }
@@ -466,7 +470,7 @@ namespace vooserver
                         OnSubtitle("subtitle " + parts[1]);
                         break;
                     case "*subtitlecount":
-                        OnSubtitleCount("subtitle " + parts[1]);
+                        OnSubtitleCount("subtitlecount " + parts[1]);
                         break;
                 }
 
