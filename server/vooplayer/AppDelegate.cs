@@ -214,6 +214,8 @@ namespace vooplayer
 
 //                Console.WriteLine("timer");
 
+                NSCursor.SetHiddenUntilMouseMoves(true);
+
                 bool force = firsttimer;
                 firsttimer = false;
 
