@@ -105,7 +105,7 @@ namespace vooplayer
             try {
                 Socket sock = _client.Client;
                 byte[] buf = Encoding.UTF8.GetBytes(s + "\n");
-                sock.BeginSend(buf, 0, buf.Length, SocketFlags.None, ar => { sock.EndSend(ar); }, null);
+                sock.BeginSend(buf, 0, buf.Length, SocketFlags.None, ar => { try { sock.EndSend(ar); } catch { }}, null);
                 Console.WriteLine("sent [" + s + "]");
             } catch { }
         }

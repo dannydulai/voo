@@ -10,7 +10,7 @@
 		<string>95-equalizer.png</string>
 	</array>
 	<key>CFBundleIdentifier</key>
-	<string>com.ishiboo.voo</string>
+	<string>com.sooloos.voo</string>
 	<key>MinimumOSVersion</key>
 	<string>3.0</string>
 	<key>NSMainNibFile</key>

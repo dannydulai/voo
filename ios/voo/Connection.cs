@@ -15,10 +15,8 @@ namespace Voo
         object _lock = new object();
 
         public Connection() {
-//            IPNP.IO.Init();
-//            IPNP.IO.IncomingBroadcast += ev_broadcast;
-
-            Connect(IPAddress.Parse("10.0.0.3"));
+            IPNP.IO.Init();
+            IPNP.IO.IncomingBroadcast += ev_broadcast;
         }
 
         public void Send(string s)

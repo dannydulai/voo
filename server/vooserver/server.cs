@@ -12,6 +12,8 @@ using MonoMac.AppKit;
 using MonoMac.ObjCRuntime;
 using System.IO.Ports;
 
+using IPNP = Voo.IPNP;
+
 namespace vooserver
 {
     public class Client {
@@ -159,7 +161,7 @@ namespace vooserver
             try {
                 Socket sock = _client.Client;
                 byte[] buf = Encoding.UTF8.GetBytes(s + "\n");
-                sock.BeginSend(buf, 0, buf.Length, SocketFlags.None, ar => { sock.EndSend(ar); }, null);
+                sock.BeginSend(buf, 0, buf.Length, SocketFlags.None, ar => { try { sock.EndSend(ar); } catch { } }, null);
                 Console.WriteLine("sent [" + s + "]");
             } catch { }
         }
@@ -182,6 +184,11 @@ namespace vooserver
     }
 
     public class Server {
+        public readonly static IPNP.Device VooServerDeviceType = new IPNP.Device("DB8DD6FA-398A-4548-8CD1-9231D6DC4EE2");
+        public readonly static ushort VERSION = 1;
+        public readonly static IPNP.Device MyDeviceID = new IPNP.Device(Guid.NewGuid());
+        IPNP.Broadcaster _ipnpdev;
+
         string _share;
         Player _player;
         CommsProcessor _comms;
@@ -197,6 +204,14 @@ namespace vooserver
 
 
         public Server() {
+            IPNP.IO.AddDeviceID(MyDeviceID);
+            IPNP.IO.AddDeviceID(VooServerDeviceType);
+            IPNP.DiscoveryItem di = new IPNP.DiscoveryItem(MyDeviceID, VooServerDeviceType, VERSION);
+            IPNP.QueryResponseItem qri = new IPNP.QueryResponseItem();
+            qri.SetResponse("tcp_port", "4356");
+            _ipnpdev = new IPNP.Broadcaster(MyDeviceID, new IPNP.IItem[] { di, qri });
+            _ipnpdev.Start();
+
             try {
                 SerialPort sp = new SerialPort("/dev/tty.usbserial-000013FDB", 115200, Parity.None, 8, StopBits.One);
                 sp.Open();
@@ -422,7 +437,7 @@ namespace vooserver
             try {
                 Socket sock = _client.Client;
                 byte[] buf = Encoding.UTF8.GetBytes(s + "\n");
-                sock.BeginSend(buf, 0, buf.Length, SocketFlags.None, ar => { sock.EndSend(ar); }, null);
+                sock.BeginSend(buf, 0, buf.Length, SocketFlags.None, ar => { try { sock.EndSend(ar); } catch { }}, null);
                 Console.WriteLine("playerSENT [" + s + "]");
             } catch { }
         }

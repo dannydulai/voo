@@ -183,6 +183,7 @@ namespace Voo
             this.play.SetTitle(_state == Connection.PlayState.Playing ? "Pause" : "Resume", UIControlState.Normal);
             this.play.Hidden = _state == Connection.PlayState.Stopped;
             this.seeklabel.Hidden = _state == Connection.PlayState.Stopped;
+            this.subtitles.Hidden = _state == Connection.PlayState.Stopped || _subtitlecount == 0;
             this.backfast.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
             this.backslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
             this.fwdslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
@@ -203,12 +204,12 @@ namespace Voo
         }
         public void SubtitleChanged(int subtitle) {
             _subtitle = subtitle;
-            this.subtitles.Hidden = _subtitlecount == 0;
+            this.subtitles.Hidden = _state == Connection.PlayState.Stopped || _subtitlecount == 0;
             this.subtitles.SetTitle(String.Format ("Subtitles: {0}/{1}", _subtitle, _subtitlecount), UIControlState.Normal);
         }
         public void SubtitleCountChanged(int subtitlecount) {
             _subtitlecount = subtitlecount;
-            this.subtitles.Hidden = _subtitlecount == 0;
+            this.subtitles.Hidden = _state == Connection.PlayState.Stopped || _subtitlecount == 0;
             this.subtitles.SetTitle(String.Format ("Subtitles: {0}/{1}", _subtitle, _subtitlecount), UIControlState.Normal);
         }
     }
@@ -297,6 +298,7 @@ namespace Voo
             this.play.SetTitle(_state == Connection.PlayState.Playing ? "Pause" : "Resume", UIControlState.Normal);
             this.play.Hidden = _state == Connection.PlayState.Stopped;
             this.seeklabel.Hidden = _state == Connection.PlayState.Stopped;
+            this.subtitles.Hidden = _state == Connection.PlayState.Stopped || _subtitlecount == 0;
             this.backfast.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
             this.backslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
             this.fwdslow.Hidden = _state == Connection.PlayState.Stopped || !_seekable;
@@ -317,12 +319,12 @@ namespace Voo
         }
         public void SubtitleChanged(int subtitle) {
             _subtitle = subtitle;
-            this.subtitles.Hidden = _subtitlecount == 0;
+            this.subtitles.Hidden = _state == Connection.PlayState.Stopped || _subtitlecount == 0;
             this.subtitles.SetTitle(String.Format ("Subtitles: {0}/{1}", _subtitle, _subtitlecount), UIControlState.Normal);
         }
         public void SubtitleCountChanged(int subtitlecount) {
             _subtitlecount = subtitlecount;
-            this.subtitles.Hidden = _subtitlecount == 0;
+            this.subtitles.Hidden = _state == Connection.PlayState.Stopped || _subtitlecount == 0;
             this.subtitles.SetTitle(String.Format ("Subtitles: {0}/{1}", _subtitle, _subtitlecount), UIControlState.Normal);
         }
     }

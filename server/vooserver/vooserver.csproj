@@ -7,6 +7,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>{C2890B9D-F35B-4390-9EE0-E73C43717468}</ProjectGuid>
     <ProjectTypeGuids>{948B3504-5B70-4649-8FE4-BDE1FB46EC69};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
+    <DefineConstants>MONO;</DefineConstants>
     <OutputType>Exe</OutputType>
     <RootNamespace>vooserver</RootNamespace>
     <AssemblyName>vooserver</AssemblyName>
@@ -16,7 +17,7 @@
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug</OutputPath>
-    <DefineConstants>DEBUG;</DefineConstants>
+    <DefineConstants>MONO;DEBUG;</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>x86</PlatformTarget>
@@ -39,6 +40,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Main.cs" />
+    <Compile Include="ipnp.cs" />
+    <Compile Include="io.cs" />
     <Compile Include="AppDelegate.cs" />
     <Compile Include="AppDelegate.designer.cs">
       <DependentUpon>AppDelegate.cs</DependentUpon>
