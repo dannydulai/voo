@@ -18,7 +18,7 @@ namespace Voo
 //            IPNP.IO.Init();
 //            IPNP.IO.IncomingBroadcast += ev_broadcast;
 
-            Connect(IPAddress.Parse("127.0.0.1"));
+            Connect(IPAddress.Parse("10.0.0.3"));
         }
 
         public void Send(string s)
