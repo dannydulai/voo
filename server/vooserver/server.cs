@@ -6,13 +6,13 @@ using System.IO;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Drawing;
-using MonoMac.Foundation;
-using MonoMac.AppKit;
-using MonoMac.ObjCRuntime;
+//using System.Drawing;
+//using MonoMac.Foundation;
+//using MonoMac.AppKit;
+//using MonoMac.ObjCRuntime;
 using System.IO.Ports;
 
-using IPNP = Voo.IPNP;
+//using IPNP = Voo.IPNP;
 
 namespace vooserver
 {
@@ -64,6 +64,7 @@ namespace vooserver
                     case ":togglepause": { _s.TogglePause(); break; }
                     case ":stop": { _s.Stop(); break; }
                     case ":subtitle": { _s.Subtitle(Convert.ToInt32(parts[1])); break; }
+                    case ":audiotrack": { _s.AudioTrack(Convert.ToInt32(parts[1])); break; }
                     case ":seek": { _s.Seek(Convert.ToUInt64(parts[1])); break; }
                     case ":nextframe": { _s.NextFrame(); break; }
                     case ":comms": { _s.Comms(parts[1]); break; }
@@ -84,6 +85,25 @@ namespace vooserver
                             Directory.Delete(Path.Combine(_share, dir), true);
                         } catch (Exception e) {
                             Console.WriteLine("failed to delete dir {0}:\n{1}", dir, e.ToString());
+                        }
+                        break;
+                    }
+                    case ":move": { 
+                        string[] paths = parts[1].Split(new char[]{'|'}, 2);
+                        
+                        string file = makesafe(paths[0]);
+                        string dir = makesafe(paths[1]);
+                        
+                        Console.WriteLine("moving {0} -> {1}", file, dir);
+                        try {
+                            if (File.Exists(file))
+                                File.Move(Path.Combine(_share, file), Path.Combine(Path.Combine(_share, dir), Path.GetFileName(file)));
+                            else if (Directory.Exists(file))
+                                Directory.Move(Path.Combine(_share, file), Path.Combine(Path.Combine(_share, dir), Path.GetFileName(file)));
+                            else
+                                Console.WriteLine("failed to move non-existent file {0} -> {1}\n", file, dir);
+                        } catch (Exception e) {
+                            Console.WriteLine("failed to move file {0} -> {1}:\n{2}", file, dir, e.ToString());
                         }
                         break;
                     }
@@ -184,17 +204,18 @@ namespace vooserver
     }
 
     public class Server {
-        public readonly static IPNP.Device VooServerDeviceType = new IPNP.Device("DB8DD6FA-398A-4548-8CD1-9231D6DC4EE2");
-        public readonly static ushort VERSION = 1;
-        public readonly static IPNP.Device MyDeviceID = new IPNP.Device(Guid.NewGuid());
-        IPNP.Broadcaster _ipnpdev;
-
-        string _share;
+        string _share = "/";
+        string _tty = "/dev/tty.usbserial-000013FDB";
+        int _port = 4356;
+        string _vooplayerappbundlepath = "./vooplayer.app";
+        
         Player _player;
         CommsProcessor _comms;
 
         string _state = "stopped";
         string _seekable = "notseekable";
+        string _audiotrack = "audiotrack -1";
+        string _audiotrackcount = "audiotrackcount 0";
         string _subtitle = "subtitle -1";
         string _subtitlecount = "subtitlecount 0";
         string _time = "time 0";
@@ -202,18 +223,33 @@ namespace vooserver
 
         object _lock = new object();
 
+        void Usage(bool exit) {
+            Debug.WriteLine("usage: vooserver.exe [-sharepath /] [-serialport /dev/tty.usbserial-000013FDB] [-listenport 4356] [-vooplayer ./vooplayer.app]");
+            Debug.WriteLine("");
+            if (exit)
+                Environment.Exit(1);
+        }
 
-        public Server() {
-            IPNP.IO.AddDeviceID(MyDeviceID);
-            IPNP.IO.AddDeviceID(VooServerDeviceType);
-            IPNP.DiscoveryItem di = new IPNP.DiscoveryItem(MyDeviceID, VooServerDeviceType, VERSION);
-            IPNP.QueryResponseItem qri = new IPNP.QueryResponseItem();
-            qri.SetResponse("tcp_port", "4356");
-            _ipnpdev = new IPNP.Broadcaster(MyDeviceID, new IPNP.IItem[] { di, qri });
-            _ipnpdev.Start();
-
+        public Server(string[] argv) {
+                
+            int argc = 0;
+            while (argc < argv.Length) {
+                if (argc+1 < argv.Length && argv[argc] == "-sharepath") {
+                    _share = argv[++argc];
+                } else if (argc+1 < argv.Length && argv[argc] == "-serialport") {
+                    _tty = argv[++argc];
+                } else if (argc+1 < argv.Length && argv[argc] == "-vooplayer") {
+                    _vooplayerappbundlepath = argv[++argc];
+                } else if (argc+1 < argv.Length && argv[argc] == "-listenport") {
+                    _port = Convert.ToInt32(argv[++argc]);
+                } else {
+                    Usage(true);
+                }
+                argc++;
+            }
+            
             try {
-                SerialPort sp = new SerialPort("/dev/tty.usbserial-000013FDB", 115200, Parity.None, 8, StopBits.One);
+                SerialPort sp = new SerialPort(_tty, 115200, Parity.None, 8, StopBits.One);
                 sp.Open();
                 _comms = new CommsProcessor(new CommsInterface(sp));
 
@@ -222,14 +258,7 @@ namespace vooserver
                 _comms.OffReceived += delegate() { Client.Broadcast("*comms off"); };
             } catch { }
 
-            _share = NSUserDefaults.StandardUserDefaults.StringForKey("sharepath");
-            if (_share == null) {
-                _share = "/";
-                NSUserDefaults.StandardUserDefaults.SetString(_share, "sharepath");
-                NSUserDefaults.StandardUserDefaults.Synchronize();
-            }
-
-            TcpListener tcpListener = new TcpListener(IPAddress.Any, 4356);
+            TcpListener tcpListener = new TcpListener(IPAddress.Any, _port);
             (new Thread(delegate() {
                         tcpListener.Start();
                         while (true) {
@@ -240,6 +269,8 @@ namespace vooserver
                                     c.Send("*" + _seekable);
                                     c.Send("*" + _subtitle);
                                     c.Send("*" + _subtitlecount);
+                                    c.Send("*" + _audiotrack);
+                                    c.Send("*" + _audiotrackcount);
                                     c.Send("*" + _time);
                                     if (_comms != null) {
                                         c.Send("*comms volume " + _comms.SystemVolume);
@@ -262,7 +293,7 @@ namespace vooserver
                     _player.Dispose();
                     _player = null;
                 }
-                _player = new Player(path);
+                _player = new Player(path, _vooplayerappbundlepath);
                 _player.TimeChanged += s => {
                     if (_time != s) {
                         _time = s;
@@ -285,6 +316,18 @@ namespace vooserver
                     if (_seekable != s) {
                         _seekable = s;
                         Client.Broadcast("*" + _seekable);
+                    }
+                };
+                _player.AudioTrackChanged += s => {
+                    if (_audiotrack != s) {
+                        _audiotrack = s;
+                        Client.Broadcast("*" + _audiotrack);
+                    }
+                };
+                _player.AudioTrackCountChanged += s => {
+                    if (_audiotrackcount != s) {
+                        _audiotrackcount = s;
+                        Client.Broadcast("*" + _audiotrackcount);
                     }
                 };
                 _player.SubtitleChanged += s => {
@@ -319,6 +362,12 @@ namespace vooserver
             lock(_lock) {
                 if (_player == null) return;
                 _player.Seek(ms);
+            }
+        }
+        public void AudioTrack(int which) {
+            lock(_lock) {
+                if (_player == null) return;
+                _player.AudioTrack(which);
             }
         }
         public void Subtitle(int which) {
@@ -364,17 +413,14 @@ namespace vooserver
         TcpClient _client;
         StreamReader _rdr;
 
-        public Player(string path)
+        public Player(string path, string vooplayerappbundlepath)
         {
             Kill();
 
-
-            using (NSAutoreleasePool pool = new NSAutoreleasePool())
-            {
-                string fn = NSBundle.MainBundle.BundlePath + "/Contents/Resources/vooplayer.app";
-                NSWorkspace.SharedWorkspace.LaunchApplication(fn);
-            }
-
+            Process.Start(new ProcessStartInfo (
+                                                "open",
+                                                "-a " + vooplayerappbundlepath + " -n")
+                          { UseShellExecute = false });
 
             int i = 10;
             while (--i != 0) {
@@ -416,6 +462,9 @@ namespace vooserver
         }
         public void Seek(ulong ms) {
             Send(":seek " + ms);
+        }
+        public void AudioTrack(int which) {
+            Send(":audiotrack " + which);
         }
         public void Subtitle(int which) {
             Send(":subtitle " + which);
@@ -481,6 +530,12 @@ namespace vooserver
                     case "*notseekable":
                         OnSeekable("notseekable");
                         break;
+                    case "*audiotrack":
+                        OnAudioTrack("audiotrack " + parts[1]);
+                        break;
+                    case "*audiotrackcount":
+                        OnAudioTrackCount("audiotrackcount " + parts[1]);
+                        break;
                     case "*subtitle":
                         OnSubtitle("subtitle " + parts[1]);
                         break;
@@ -503,11 +558,23 @@ namespace vooserver
         void OnLength(string s) { if (LengthChanged != null) LengthChanged(s); }
         public event Action<string> SeekableChanged;
         void OnSeekable(string s) { if (SeekableChanged != null) SeekableChanged(s); }
+        public event Action<string> AudioTrackChanged;
+        void OnAudioTrack(string s) { if (AudioTrackChanged != null) AudioTrackChanged(s); }
+        public event Action<string> AudioTrackCountChanged;
+        void OnAudioTrackCount(string s) { if (AudioTrackCountChanged != null) AudioTrackCountChanged(s); }
         public event Action<string> SubtitleChanged;
         void OnSubtitle(string s) { if (SubtitleChanged != null) SubtitleChanged(s); }
         public event Action<string> SubtitleCountChanged;
         void OnSubtitleCount(string s) { if (SubtitleCountChanged != null) SubtitleCountChanged(s); }
     }
 
-
+    public class MainClass
+    {
+        static void Main(string[] args)
+        {
+            Server s = new Server(args);
+            AutoResetEvent are = new AutoResetEvent(false);
+            are.WaitOne();
+        }
+    }
 }
