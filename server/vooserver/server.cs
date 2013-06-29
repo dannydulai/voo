@@ -65,41 +65,40 @@ namespace vooserver
                     case ":stop": { _s.Stop(); break; }
                     case ":subtitle": { _s.Subtitle(Convert.ToInt32(parts[1])); break; }
                     case ":audiotrack": { _s.AudioTrack(Convert.ToInt32(parts[1])); break; }
-                    case ":seek": { _s.Seek(Convert.ToUInt64(parts[1])); break; }
+                    case ":seek": { _s.Seek(Convert.ToInt64(parts[1])); break; }
                     case ":nextframe": { _s.NextFrame(); break; }
                     case ":comms": { _s.Comms(parts[1]); break; }
-                    case ":delfile": { 
-                        string file = makesafe(parts[1]);
-                        Console.WriteLine("deleting file {0}", file);
+                    case ":del": { 
+                        string path = makesafe(parts[1]);
+                        Console.WriteLine("deleting {0}", path);
+                        path = Path.Combine(_share, path);
+
                         try {
-                            File.Delete(Path.Combine(_share, file));
+                            if (File.Exists(path))
+                                File.Delete(path);
+                            else if (Directory.Exists(path))
+                                Directory.Delete(path, true);
+                            else
+                            Console.WriteLine("failed to non-existant path {0}", path);
                         } catch (Exception e) {
-                            Console.WriteLine("failed to delete file {0}:\n{1}", file, e.ToString());
-                        }
-                        break;
-                    }
-                    case ":deldir": { 
-                        string dir = makesafe(parts[1]);
-                        Console.WriteLine("deleting dir {0}", dir);
-                        try {
-                            Directory.Delete(Path.Combine(_share, dir), true);
-                        } catch (Exception e) {
-                            Console.WriteLine("failed to delete dir {0}:\n{1}", dir, e.ToString());
+                            Console.WriteLine("failed to delete {0}:\n{1}", path, e.ToString());
                         }
                         break;
                     }
                     case ":move": { 
                         string[] paths = parts[1].Split(new char[]{'|'}, 2);
                         
-                        string file = makesafe(paths[0]);
+                        string file = makesafe(paths[0]); 
                         string dir = makesafe(paths[1]);
-                        
                         Console.WriteLine("moving {0} -> {1}", file, dir);
+                        file = Path.Combine(_share, file); 
+                        dir = Path.Combine(_share, dir);
+                        
                         try {
                             if (File.Exists(file))
-                                File.Move(Path.Combine(_share, file), Path.Combine(Path.Combine(_share, dir), Path.GetFileName(file)));
+                                File.Move(file, Path.Combine(dir, Path.GetFileName(file)));
                             else if (Directory.Exists(file))
-                                Directory.Move(Path.Combine(_share, file), Path.Combine(Path.Combine(_share, dir), Path.GetFileName(file)));
+                                Directory.Move(file, Path.Combine(dir, Path.GetFileName(file)));
                             else
                                 Console.WriteLine("failed to move non-existent file {0} -> {1}\n", file, dir);
                         } catch (Exception e) {
@@ -145,6 +144,8 @@ namespace vooserver
                                 case ".mov": break;
                                 case ".flv": break;
                                 case ".mpeg": break;
+                                case ".srt": break;
+                                case ".sub": break;
                                 default : continue;
                             }
                             if (r != "") r += ":";
@@ -349,6 +350,8 @@ namespace vooserver
                 if (_player != null) {
                     _player.Dispose();
                     _player = null;
+                } else {
+                    Player.Kill();
                 }
             }
         }
@@ -358,9 +361,10 @@ namespace vooserver
                 _player.TogglePause();
             }
         }
-        public void Seek(ulong ms) {
+        public void Seek(long ms) {
             lock(_lock) {
                 if (_player == null) return;
+                if (ms < 0) ms = 0;
                 _player.Seek(ms);
             }
         }
@@ -460,7 +464,7 @@ namespace vooserver
         public void TogglePause() {
             Send(":togglepause");
         }
-        public void Seek(ulong ms) {
+        public void Seek(long ms) {
             Send(":seek " + ms);
         }
         public void AudioTrack(int which) {
@@ -473,7 +477,7 @@ namespace vooserver
             Send(":nextframe");
         }
 
-        void Kill() {
+        public static void Kill() {
             using (Process p = new Process()) {
                 p.StartInfo.FileName = "killall";
                 p.StartInfo.Arguments = "-9 vooplayer";
