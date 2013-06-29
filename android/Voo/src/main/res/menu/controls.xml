@@ -1,0 +1,22 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:id="@+id/action_controls"
+          android:title="@string/action_controls"
+          android:orderInCategory="100"
+          android:showAsAction="always" />
+    <item android:id="@+id/action_library"
+        android:title="@string/action_library"
+        android:orderInCategory="101"
+        android:showAsAction="always" />
+    <item android:id="@+id/action_refresh"
+          android:title="@string/refresh"
+          android:orderInCategory="104"
+          android:showAsAction="never" />
+    <item android:id="@+id/action_paste"
+          android:title="Paste"
+          android:orderInCategory="105"
+          android:showAsAction="never" />
+    <item android:id="@+id/action_disconnect"
+          android:title="@string/Disconnect"
+          android:orderInCategory="106"
+          android:showAsAction="never" />
+</menu>

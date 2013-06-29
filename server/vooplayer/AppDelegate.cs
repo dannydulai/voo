@@ -5,7 +5,6 @@ using System.IO;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Drawing;
 using MonoMac.Foundation;
 using MonoMac.AppKit;
 using MonoMac.ObjCRuntime;
@@ -234,17 +233,17 @@ namespace vooplayer
                     _seekable = seekable;
                     Client.Broadcast(_seekable ? "*seekable" : "*notseekable");
                 }
-                int audiotrack = VLC.libvlc_video_get_spu(mp);
+                int audiotrack = VLC.libvlc_audio_get_track(mp);
                 if (_audiotrack != audiotrack || force) {
                     _audiotrack = audiotrack;
                     Client.Broadcast("*audiotrack " + _audiotrack);
                 }
-                int audiotrackcount = VLC.libvlc_video_get_spu_count(mp);
+                int audiotrackcount = VLC.libvlc_audio_get_track_count(mp);
                 if (_audiotrackcount != audiotrackcount || force) {
                     _audiotrackcount = audiotrackcount;
                     Client.Broadcast("*audiotrackcount " + _audiotrackcount);
                 }
-                int subtitle = VLC.libvlc_video_get_apu(mp);
+                int subtitle = VLC.libvlc_video_get_spu(mp);
                 if (_subtitle != subtitle || force) {
                     _subtitle = subtitle;
                     Client.Broadcast("*subtitle " + _subtitle);
@@ -300,7 +299,7 @@ namespace vooplayer
         public void AudioTrack(int which) {
             lock(_lock) {
                 if (mp == IntPtr.Zero) return;
-                VLC.libvlc_video_set_apu(mp, which);
+                VLC.libvlc_audio_set_track(mp, which);
             }
         }
         public void Subtitle(int which) {

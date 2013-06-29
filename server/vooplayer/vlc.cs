@@ -91,6 +91,15 @@ namespace vooplayer
         public static extern int libvlc_video_set_spu(IntPtr player, int i_spu);
 
         [DllImport(lib)]
+        public static extern int  libvlc_audio_get_track(IntPtr player);
+
+        [DllImport(lib)]
+        public static extern int libvlc_audio_get_track_count(IntPtr player);
+
+        [DllImport(lib)]
+        public static extern int libvlc_audio_set_track(IntPtr player, int i_apu);
+
+        [DllImport(lib)]
         public static extern ulong libvlc_media_player_get_length(IntPtr player);
 
         public enum State

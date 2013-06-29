@@ -1,0 +1,13 @@
+include *.js
+include *.html
+include *.css
+include *.c
+include *.cs
+include *.cpp
+include *.h
+include *.txt
+include *.xml
+include *.rb
+include *.sh
+include *.bash
+include *.java

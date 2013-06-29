@@ -1,0 +1,49 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".ConnectActivity"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="voo"
+        android:layout_gravity="center"
+        android:textSize="60sp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="40dp"/>
+
+    <EditText
+        android:id="@+id/ipaddress"
+        android:singleLine="true"
+        android:maxLines="1"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:inputType="phone"
+        android:hint="@string/enteripaddress"
+        />
+
+    <Button
+        android:id="@+id/connect_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/connect_button"
+        android:paddingLeft="32dp"
+        android:paddingRight="32dp"
+        android:layout_gravity="right"/>
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:id="@+id/errortext"
+        android:layout_gravity="center"
+        android:layout_marginTop="50dp"
+        android:textColor="@android:color/holo_red_light"
+        android:text="Error text"
+        android:singleLine="true"/>
+
+</LinearLayout>

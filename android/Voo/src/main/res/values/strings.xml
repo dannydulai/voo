@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">Voo</string>
+    <string name="connect_button">Connect</string>
+    <string name="ipaddress">IP Address</string>
+    <string name="enteripaddress">Enter IP Address</string>
+    <string name="action_library">View Library</string>
+    <string name="action_subtitles">Change Subtitles</string>
+    <string name="action_audiotrack">Change Audio Track</string>
+    <string name="areyousurepoweroff">Are you sure you want to power off the speakers?</string>
+    <string name="yes">Yes</string>
+    <string name="no">No</string>
+    <string name="poweroff">Power Off</string>
+    <string name="stop">Stop</string>
+    <string name="areyousureyouwanttostop">Are you sure you want to stop?</string>
+    <string name="Disconnect">Disconnect</string>
+    <string name="error_field_required">This field is required</string>
+    <string name="action_controls">View Controls</string>
+    <string name="refresh">Refresh</string>
+    <string name="areyousureyouwanttodelete">Are you sure you want to delete?</string>
+</resources>

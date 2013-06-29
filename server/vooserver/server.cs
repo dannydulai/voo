@@ -225,8 +225,8 @@ namespace vooserver
         object _lock = new object();
 
         void Usage(bool exit) {
-            Debug.WriteLine("usage: vooserver.exe [-sharepath /] [-serialport /dev/tty.usbserial-000013FDB] [-listenport 4356] [-vooplayer ./vooplayer.app]");
-            Debug.WriteLine("");
+            Console.WriteLine("usage: vooserver.exe [-sharepath /] [-serialport /dev/tty.usbserial-000013FDB] [-listenport 4356] [-vooplayer ./vooplayer.app]");
+            Console.WriteLine("");
             if (exit)
                 Environment.Exit(1);
         }
@@ -250,13 +250,15 @@ namespace vooserver
             }
             
             try {
-                SerialPort sp = new SerialPort(_tty, 115200, Parity.None, 8, StopBits.One);
-                sp.Open();
-                _comms = new CommsProcessor(new CommsInterface(sp));
+                if (_tty != "") {
+                    SerialPort sp = new SerialPort(_tty, 115200, Parity.None, 8, StopBits.One);
+                    sp.Open();
+                    _comms = new CommsProcessor(new CommsInterface(sp));
 
-                _comms.SourceSelectionReceived += delegate(int src) { Client.Broadcast("*comms source " + src); };
-                _comms.VolumeReceived += delegate(int vol) { Client.Broadcast("*comms volume " + vol); };
-                _comms.OffReceived += delegate() { Client.Broadcast("*comms off"); };
+                    _comms.SourceSelectionReceived += delegate(int src) { Client.Broadcast("*comms source " + src); };
+                    _comms.VolumeReceived += delegate(int vol) { Client.Broadcast("*comms volume " + vol); };
+                    _comms.OffReceived += delegate() { Client.Broadcast("*comms off"); };
+                }
             } catch { }
 
             TcpListener tcpListener = new TcpListener(IPAddress.Any, _port);

@@ -1,0 +1,40 @@
+<ViewSwitcher xmlns:android="http://schemas.android.com/apk/res/android"
+    android:name="Voo"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:voo="http://schemas.android.com/apk-auto"
+    tools:context=".ControlsActivity"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:id="@+id/viewswitcher">
+
+    <FrameLayout
+            android:layout_width="500dp"
+            android:layout_height="fill_parent"
+            android:layout_gravity="center_horizontal"
+            >
+
+        <fragment
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"
+                android:name="com.ishiboo.voo.ControlsFragment"
+                tools:layout="@layout/fragment_controls"
+                android:id="@+id/controlsfragment"
+                />
+    </FrameLayout>
+
+    <FrameLayout
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:id="@+id/listroot">
+
+        <ProgressBar
+            style="@android:style/Widget.Holo.Light.ProgressBar.Large"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:id="@+id/listloading"
+            android:layout_gravity="center"
+            android:indeterminate="true"
+            android:visibility="gone"/>
+
+    </FrameLayout>
+</ViewSwitcher>
