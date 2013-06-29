@@ -69,6 +69,7 @@ namespace vooplayer
                     case ":exit": Console.WriteLine("client issued exit"); this.Abort(); break;
                     case ":togglepause": { _s.TogglePause(); break; }
                     case ":stop": { _s.Stop(); break; }
+                    case ":audiotrack": { _s.AudioTrack(Convert.ToInt32(parts[1])); break; }
                     case ":subtitle": { _s.Subtitle(Convert.ToInt32(parts[1])); break; }
                     case ":seek": { _s.Seek(Convert.ToUInt64(parts[1])); break; }
                     case ":nextframe": { _s.NextFrame(); break; }
@@ -134,6 +135,8 @@ namespace vooplayer
 
         bool _playing;
         bool _seekable;
+        int _audiotrack;
+        int _audiotrackcount;
         int _subtitle;
         int _subtitlecount;
         ulong _time;
@@ -162,9 +165,12 @@ namespace vooplayer
                                     if (mp != IntPtr.Zero) {
                                         c.Send(_playing ? "*playing" : "*paused");
                                         c.Send(_seekable ? "*seekable" : "*notseekable");
+                                        c.Send("*audiotrack " + _audiotrack);
+                                        c.Send("*audiotrackcount " + _audiotrackcount);
                                         c.Send("*subtitle " + _subtitle);
                                         c.Send("*subtitlecount " + _subtitlecount);
                                         c.Send("*time " + _time);
+                                        c.Send("*length " + _length);
                                     }
                                 }
                             } catch (Exception e) {
@@ -196,7 +202,7 @@ namespace vooplayer
                         playing = false;
                         break;
                     case VLC.State.Stopped:
-                        Console.WriteLine("STOPPED");
+//                        Console.WriteLine("STOPPED");
                         NSApplication.SharedApplication.Terminate(_app);
                         return;
                     case VLC.State.Ended:
@@ -228,7 +234,17 @@ namespace vooplayer
                     _seekable = seekable;
                     Client.Broadcast(_seekable ? "*seekable" : "*notseekable");
                 }
-                int subtitle = VLC.libvlc_video_get_spu(mp);
+                int audiotrack = VLC.libvlc_video_get_spu(mp);
+                if (_audiotrack != audiotrack || force) {
+                    _audiotrack = audiotrack;
+                    Client.Broadcast("*audiotrack " + _audiotrack);
+                }
+                int audiotrackcount = VLC.libvlc_video_get_spu_count(mp);
+                if (_audiotrackcount != audiotrackcount || force) {
+                    _audiotrackcount = audiotrackcount;
+                    Client.Broadcast("*audiotrackcount " + _audiotrackcount);
+                }
+                int subtitle = VLC.libvlc_video_get_apu(mp);
                 if (_subtitle != subtitle || force) {
                     _subtitle = subtitle;
                     Client.Broadcast("*subtitle " + _subtitle);
@@ -279,6 +295,12 @@ namespace vooplayer
             lock(_lock) {
                 if (mp == IntPtr.Zero) return;
                 VLC.libvlc_media_player_set_time(mp, ms);
+            }
+        }
+        public void AudioTrack(int which) {
+            lock(_lock) {
+                if (mp == IntPtr.Zero) return;
+                VLC.libvlc_video_set_apu(mp, which);
             }
         }
         public void Subtitle(int which) {
