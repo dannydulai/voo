@@ -113,7 +113,7 @@ public class ControlsActivity extends Activity {
             public void setChecked(boolean b) {
                 this.setSelected(b);
                 if (b)
-                    this.setBackgroundColor(Color.argb(0x40,0,0,0));
+                    this.setBackgroundColor(Color.argb(0x40,0xff,0,0));
                 else
                     this.setBackgroundColor(Color.argb(0,0,0,0));
             }
