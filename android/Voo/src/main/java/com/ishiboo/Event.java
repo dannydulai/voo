@@ -37,6 +37,7 @@ public class Event<M> {
         return new ListenerRegistration(this, listener);
     }
 
+    @SuppressWarnings({"unchecked"})
     public void dispatch(final Object source, final M message) {
         final Object[] local = listeners;
         if (local != null) {
