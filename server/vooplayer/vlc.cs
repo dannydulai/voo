@@ -16,7 +16,7 @@ namespace vooplayer
  
     static class VLC
     {
-        const string lib = "/Applications/VLC.app/Contents/MacOS/lib/libvlc.5.dylib";
+        const string lib = "/Applications/VLC32.app/Contents/MacOS/lib/libvlc.5.dylib";
 
         #region core
         [DllImport(lib)]
