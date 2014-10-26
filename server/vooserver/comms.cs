@@ -341,6 +341,8 @@ namespace vooserver
             set {
                 if (_systemvolume == value) return;
                 SendSystemVolume(value);
+                if (VolumeReceived != null)
+                    VolumeReceived(_systemvolume);
             }
         }
         public bool IsOff {
@@ -350,10 +352,17 @@ namespace vooserver
             get { return _systemsourcenum; }
             set {
                 if (_systemsourcenum == value) {
-Console.WriteLine("ignoring src selection to {0}", value);
-return;
-}
+                    Console.WriteLine("ignoring src selection to {0}", value);
+                    return;
+                }
                 SendSystemSourceSelection(value);
+                if (IsOff) {
+                    if (OffReceived != null)
+                        OffReceived();
+                } else {
+                    if (SourceSelectionReceived != null)
+                        SourceSelectionReceived(_systemsourcenum);
+                }
             }
         }
 
@@ -374,9 +383,9 @@ return;
             {
                 if ((cmd >= 1 && cmd <= 11) || cmd == 17)
                 {
+                    _systemsourcenum = cmd;
                     if (SourceSelectionReceived != null)
                         SourceSelectionReceived(cmd);
-                    _systemsourcenum = cmd;
                 }
                 else if (cmd == 16)
                 {
@@ -386,9 +395,10 @@ return;
                 }
                 else if (cmd == 20)
                 {
-                    if (VolumeReceived != null && data1 >= 1 && data1 <= 99) {
+                    if (data1 >= 1 && data1 <= 99) {
                         _systemvolume = data1;
-                        VolumeReceived(data1);
+                        if (VolumeReceived != null)
+                            VolumeReceived(_systemvolume);
                     }
                 }
             }
@@ -430,7 +440,7 @@ return;
         void SendSystemVolume(int num)
         {
             if (num < 1 || num > 99)
-                throw new ArgumentException("Invalid Volume: " + num);
+                return;
             _systemvolume = num;
             _iface.SendComms(CommsSource.SystemWide, (byte)20, (byte)num);
         }

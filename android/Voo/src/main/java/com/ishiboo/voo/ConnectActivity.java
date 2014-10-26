@@ -108,6 +108,7 @@ public class ConnectActivity extends Activity {
             _errortext.setVisibility(View.INVISIBLE);
         }
 
+
         @Override
         protected void onPostExecute(final Boolean success) {
             _progress.dismiss();
